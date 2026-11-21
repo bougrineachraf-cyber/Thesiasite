@@ -4,8 +4,358 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Thèsia — Assistant de Veille et d'Ingénierie Doctorale</title>
-  <meta name="description" content="Thèsia accompagne les doctorants dans la veille scientifique automatisée, le filtrage sémantique d'appels à communication et la planification dans Google Agenda." />
+  <meta name="description" content="Thèsia accompagne les doctorants dans la veille scientifique automatisée, la recherche d'appels à communication et la planification dans Google Agenda." />
   <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Styles dédiés au moteur de recherche et filtrage d'appels à communication */
+    .search-section {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      padding: 3.25rem 0;
+    }
+
+    .search-panel {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.75rem;
+      box-shadow: var(--shadow);
+    }
+
+    .search-bar-row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .search-input-wrap {
+      position: relative;
+      flex: 1 1 320px;
+    }
+
+    .search-input-wrap svg {
+      position: absolute;
+      left: 0.95rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.8rem 1rem 0.8rem 2.75rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.98rem;
+      background: #ffffff;
+      color: var(--text);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12);
+    }
+
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .filter-select {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--text);
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .quick-pills {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .quick-pills-label {
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-right: 0.25rem;
+    }
+
+    .pill-btn {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      color: var(--text-muted);
+      padding: 0.35rem 0.8rem;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .pill-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .pill-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    .btn-reset {
+      background: transparent;
+      border: 1px solid #cbd5e1;
+      color: var(--text-muted);
+      padding: 0.65rem 1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-reset:hover {
+      background: #e2e8f0;
+      color: var(--text);
+    }
+
+    .results-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+      font-size: 0.92rem;
+      color: var(--text-muted);
+    }
+
+    .results-count strong {
+      color: var(--primary);
+    }
+
+    .cfp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+      gap: 1.35rem;
+    }
+
+    .cfp-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .cfp-card:hover {
+      transform: translateY(-2px);
+      border-color: #93c5fd;
+    }
+
+    .cfp-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .badge {
+      font-size: 0.76rem;
+      font-weight: 700;
+      padding: 0.22rem 0.6rem;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .badge-type {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .badge-modalite {
+      background: #f1f5f9;
+      color: #334155;
+    }
+
+    .badge-deadline {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-deadline.urgent {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .cfp-title {
+      font-size: 1.1rem;
+      line-height: 1.35;
+      color: var(--text);
+      margin-bottom: 0.55rem;
+    }
+
+    .cfp-meta {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      display: grid;
+      gap: 0.25rem;
+    }
+
+    .cfp-summary {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .cfp-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 1.15rem;
+    }
+
+    .cfp-tag {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+      font-size: 0.78rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+    }
+
+    .cfp-actions {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      padding-top: 0.9rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .btn-card-primary {
+      flex: 1;
+      text-align: center;
+      background: var(--primary);
+      color: #ffffff !important;
+      padding: 0.55rem 0.85rem;
+      border-radius: 7px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      text-decoration: none !important;
+    }
+
+    .btn-card-primary:hover {
+      background: #172554;
+    }
+
+    .btn-card-secondary {
+      background: var(--accent-light);
+      color: var(--accent);
+      border: 1px solid #a7f3d0;
+      padding: 0.55rem 0.85rem;
+      border-radius: 7px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-card-secondary:hover {
+      background: #d1fae5;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1.5rem;
+      background: var(--bg);
+      border: 1px dashed #cbd5e1;
+      border-radius: var(--radius);
+      color: var(--text-muted);
+    }
+
+    /* Modale de prévisualisation du rétroplanning */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      z-index: 200;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: #ffffff;
+      border-radius: var(--radius);
+      max-width: 540px;
+      width: 100%;
+      padding: 1.75rem;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      line-height: 1;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .milestone-list {
+      list-style: none;
+      padding: 0;
+      margin: 1rem 0 1.35rem;
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .milestone-item {
+      background: var(--bg);
+      border-left: 4px solid var(--accent);
+      padding: 0.7rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.92rem;
+    }
+  </style>
 </head>
 <body>
 
@@ -23,6 +373,7 @@
       </a>
       <nav class="nav-links" aria-label="Navigation principale">
         <a href="index.html" class="active">Accueil</a>
+        <a href="#recherche-appels">Appels à communication</a>
         <a href="#fonctionnalites">Fonctionnalités</a>
         <a href="privacy.html">Confidentialité (Privacy)</a>
         <a href="terms.html">CGU (Terms)</a>
@@ -42,9 +393,83 @@
           <strong>English Overview:</strong> Thèsia is a mobile academic watch and scheduling assistant for PhD candidates. It filters relevant calls for papers using research keywords, generates concise writing angle suggestions, and automates backward milestone scheduling in a dedicated Google Calendar.
         </p>
         <div class="hero-actions">
-          <a href="#fonctionnalites" class="btn btn-primary">Découvrir le fonctionnement</a>
+          <a href="#recherche-appels" class="btn btn-primary">Rechercher un appel à communication</a>
           <a href="privacy.html" class="btn btn-outline">Politique de confidentialité / Privacy Policy</a>
         </div>
+      </div>
+    </section>
+
+    <!-- MOTEUR DE RECHERCHE ET FILTRAGE DES APPELS À COMMUNICATION -->
+    <section id="recherche-appels" class="search-section">
+      <div class="container">
+        <h2 class="section-title">Explorer les appels à communication</h2>
+        <p class="section-subtitle">
+          Recherchez par mot-clé, discipline, université ou ville, et filtrez les opportunités scientifiques ouvertes aux doctorants.
+        </p>
+
+        <div class="search-panel">
+          <div class="search-bar-row">
+            <div class="search-input-wrap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input
+                type="search"
+                id="searchInput"
+                class="search-input"
+                placeholder="Rechercher un thème, une revue, une université (ex. ingénierie pédagogique, IA, Kénitra)..."
+                aria-label="Rechercher un appel à communication"
+              />
+            </div>
+            <button type="button" id="resetFiltersBtn" class="btn-reset">Réinitialiser</button>
+          </div>
+
+          <div class="filters-grid">
+            <select id="filterType" class="filter-select" aria-label="Filtrer par type d'événement">
+              <option value="all">Tous les types d'événements</option>
+              <option value="colloque">Colloque scientifique</option>
+              <option value="doctoriales">Doctoriales</option>
+              <option value="journee_etude">Journée d'étude</option>
+              <option value="numero_revue">Numéro spécial de revue</option>
+            </select>
+
+            <select id="filterModalite" class="filter-select" aria-label="Filtrer par modalité">
+              <option value="all">Toutes les modalités</option>
+              <option value="presentiel">Présentiel</option>
+              <option value="hybride">Hybride</option>
+              <option value="en_ligne">En ligne / Distanciel</option>
+            </select>
+
+            <select id="filterLangue" class="filter-select" aria-label="Filtrer par langue">
+              <option value="all">Toutes les langues</option>
+              <option value="fr">Français (FR)</option>
+              <option value="en">Anglais (EN)</option>
+              <option value="ar">Arabe (AR)</option>
+            </select>
+
+            <select id="sortSelect" class="filter-select" aria-label="Trier les résultats">
+              <option value="deadline_asc">Trier : Date limite (plus proche)</option>
+              <option value="deadline_desc">Trier : Date limite (plus lointaine)</option>
+            </select>
+          </div>
+
+          <div class="quick-pills" role="group" aria-label="Filtres rapides par thématique">
+            <span class="quick-pills-label">Thématiques rapides :</span>
+            <button type="button" class="pill-btn" data-keyword="ingénierie pédagogique">Ingénierie pédagogique</button>
+            <button type="button" class="pill-btn" data-keyword="intelligence artificielle">IA &amp; Éducation</button>
+            <button type="button" class="pill-btn" data-keyword="littérature">Littérature &amp; Arts</button>
+            <button type="button" class="pill-btn" data-keyword="didactique">Didactique des langues</button>
+            <button type="button" class="pill-btn" data-keyword="maroc">Maroc / UIT</button>
+          </div>
+        </div>
+
+        <div class="results-toolbar">
+          <div id="resultsCount" class="results-count">Chargement des appels...</div>
+          <div>Synchronisation complète et alertes personnalisées disponibles sur l'application mobile <strong>Thèsia</strong>.</div>
+        </div>
+
+        <div id="cfpResultsGrid" class="cfp-grid" aria-live="polite"></div>
       </div>
     </section>
 
@@ -114,6 +539,27 @@
     </section>
   </main>
 
+  <!-- MODALE D'APERÇU DU RÉTROPLANNING J-30 / J-7 / JOUR J -->
+  <div id="scheduleModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <span class="badge badge-type" style="margin-bottom:0.4rem; display:inline-block;">Rétroplanning Google Agenda</span>
+          <h3 id="modalTitle" style="font-size:1.15rem; color:var(--text);">Aperçu des 3 jalons</h3>
+        </div>
+        <button type="button" id="closeModalBtn" class="modal-close" aria-label="Fermer">&times;</button>
+      </div>
+      <p id="modalCallTitle" style="font-size:0.94rem; color:var(--text-muted);"></p>
+      <ul id="modalMilestones" class="milestone-list"></ul>
+      <p style="font-size:0.86rem; color:var(--text-muted); margin-bottom:1.1rem;">
+        Dans l'application mobile <strong>Thèsia</strong>, un glissement vers la droite crée automatiquement ces trois événements dans votre sous-agenda dédié <em>« Veille &amp; Publications Thèse »</em>.
+      </p>
+      <div style="display:flex; justify-content:flex-end; gap:0.65rem;">
+        <a id="modalExternalLink" href="#" target="_blank" rel="noopener noreferrer" class="btn-card-primary" style="flex:0 1 auto;">Consulter l'appel officiel</a>
+      </div>
+    </div>
+  </div>
+
   <footer>
     <div class="container footer-inner">
       <div>
@@ -122,11 +568,334 @@
       </div>
       <div class="footer-links">
         <a href="index.html">Accueil</a>
+        <a href="#recherche-appels">Appels à communication</a>
         <a href="privacy.html">Politique de confidentialité / Privacy Policy</a>
         <a href="terms.html">Conditions Générales d'Utilisation / Terms of Service</a>
       </div>
     </div>
   </footer>
+
+  <script>
+    // =========================================================================
+    // CONFIGURATION OPTIONNELLE SUPABASE (Laisser vide pour le mode autonome)
+    // =========================================================================
+    const SUPABASE_URL = "";      // Ex: "https://votre-projet.supabase.co"
+    const SUPABASE_ANON_KEY = ""; // Ex: "eyJhbGciOiJIUzI1NiIsInR5cCI6..."
+
+    // Base d'appels à communication de référence (affichée immédiatement)
+    const INITIAL_CALLS = [
+      {
+        id: "cfp-1",
+        titre: "Doctoriales Nationales : Ingénierie Pédagogique, Humanités Numériques et Intelligence Artificielle",
+        type: "doctoriales",
+        organisme_ou_revue: "Laboratoire LLAIP — FLLA, Université Ibn Tofaïl",
+        date_limite_soumission: "2027-01-15",
+        modalite: "presentiel",
+        lieu: "Kénitra, Maroc",
+        langues: ["fr", "en", "ar"],
+        mots_cles_extraits: ["ingénierie pédagogique", "intelligence artificielle", "humanités numériques", "doctoriales", "maroc"],
+        resume_court: "Rencontres doctorales dédiées aux dispositifs techno-pédagogiques innovants, à l'intégration de l'IA dans l'enseignement supérieur et aux méthodologies de recherche en lettres et arts.",
+        url_source: "https://flla.uit.ac.ma"
+      },
+      {
+        id: "cfp-2",
+        titre: "Colloque International : Littérature, Arts et Créativité à l'Ère des Technologies Émergentes",
+        type: "colloque",
+        organisme_ou_revue: "Faculté des Langues, des Lettres et des Arts (FLLA)",
+        date_limite_soumission: "2027-02-10",
+        modalite: "hybride",
+        lieu: "Kénitra, Maroc",
+        langues: ["fr", "en"],
+        mots_cles_extraits: ["littérature", "arts", "créativité", "humanités numériques", "maroc"],
+        resume_court: "Exploration des mutations esthétiques, narratives et artistiques induites par les outils numériques et l'intelligence artificielle générative.",
+        url_source: "https://www.uit.ac.ma"
+      },
+      {
+        id: "cfp-3",
+        titre: "Numéro Spécial : Autorégulation des Apprentissages et Environnements Numériques Universitaires",
+        type: "numero_revue",
+        organisme_ou_revue: "Revue Internationale des Technologies en Pédagogie Universitaire (RITPU)",
+        date_limite_soumission: "2027-01-28",
+        modalite: "en_ligne",
+        lieu: "Publication internationale (Comité de lecture)",
+        langues: ["fr", "en"],
+        mots_cles_extraits: ["ingénierie pédagogique", "autorégulation", "enseignement supérieur", "charge cognitive"],
+        resume_court: "Appel à articles scientifiques portant sur l'accompagnement méthodologique des étudiants et doctorants via des artefacts numériques et assistants IA.",
+        url_source: "https://www.ritpu.org"
+      },
+      {
+        id: "cfp-4",
+        titre: "Journée d'Étude : Didactique des Langues, Corpus Numériques et Évaluation Formative",
+        type: "journee_etude",
+        organisme_ou_revue: "CEDoc Langues, Lettres et Arts — Université Ibn Tofaïl",
+        date_limite_soumission: "2026-12-20",
+        modalite: "presentiel",
+        lieu: "Kénitra, Maroc",
+        langues: ["fr", "ar", "en"],
+        mots_cles_extraits: ["didactique", "langues", "évaluation", "corpus numériques", "maroc"],
+        resume_court: "Échanges scientifiques autour de l'exploitation des corpus numériques et des approches actionnelles dans l'enseignement des langues au Maroc.",
+        url_source: "https://flla.uit.ac.ma"
+      },
+      {
+        id: "cfp-5",
+        titre: "International Conference on AI-Enhanced Academic Research & Doctoral Training (ICAERT 2027)",
+        type: "colloque",
+        organisme_ou_revue: "European & Mediterranean Academic Network",
+        date_limite_soumission: "2027-03-05",
+        modalite: "hybride",
+        lieu: "Rabat / En ligne",
+        langues: ["en", "fr"],
+        mots_cles_extraits: ["intelligence artificielle", "doctoral training", "ingénierie pédagogique", "academic watch"],
+        resume_court: "Interdisciplinary forum examining ethical AI tools, automated literature reviews, and digital workflows supporting PhD candidates.",
+        url_source: "https://calenda.org"
+      },
+      {
+        id: "cfp-6",
+        titre: "Numéro Thématique : Poétiques Contemporaines, Médias et Intermédialité",
+        type: "numero_revue",
+        organisme_ou_revue: "Cahiers de Recherche en Littérature et Arts",
+        date_limite_soumission: "2027-02-22",
+        modalite: "en_ligne",
+        lieu: "Revue indexée (Comité international)",
+        langues: ["fr"],
+        mots_cles_extraits: ["littérature", "arts", "intermédialité", "poétique"],
+        resume_court: "Contributions analysant le dialogue entre texte littéraire, arts visuels et supports numériques dans les productions contemporaines.",
+        url_source: "https://journals.openedition.org"
+      }
+    ];
+
+    let allCalls = [...INITIAL_CALLS];
+
+    const TYPE_LABELS = {
+      colloque: "Colloque",
+      doctoriales: "Doctoriales",
+      journee_etude: "Journée d'étude",
+      numero_revue: "Numéro de revue"
+    };
+
+    const MODALITE_LABELS = {
+      presentiel: "Présentiel",
+      hybride: "Hybride",
+      en_ligne: "En ligne"
+    };
+
+    function normalizeText(str) {
+      return (str || "")
+        .toString()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function formatDateFr(isoDate) {
+      if (!isoDate) return "Date non précisée";
+      const [y, m, d] = isoDate.split("-").map(Number);
+      const date = new Date(y, m - 1, d);
+      return date.toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      });
+    }
+
+    function getDaysRemaining(isoDate) {
+      const [y, m, d] = isoDate.split("-").map(Number);
+      const target = new Date(y, m - 1, d);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+    }
+
+    function subtractDays(isoDate, days) {
+      const [y, m, d] = isoDate.split("-").map(Number);
+      const dt = new Date(y, m - 1, d);
+      dt.setDate(dt.getDate() - days);
+      return dt.toLocaleDateString("fr-FR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      });
+    }
+
+    function renderCalls() {
+      const query = normalizeText(document.getElementById("searchInput").value.trim());
+      const typeFilter = document.getElementById("filterType").value;
+      const modaliteFilter = document.getElementById("filterModalite").value;
+      const langueFilter = document.getElementById("filterLangue").value;
+      const sortOrder = document.getElementById("sortSelect").value;
+
+      let filtered = allCalls.filter((call) => {
+        if (typeFilter !== "all" && call.type !== typeFilter) return false;
+        if (modaliteFilter !== "all" && call.modalite !== modaliteFilter) return false;
+        if (langueFilter !== "all" && !(call.langues || []).includes(langueFilter)) return false;
+
+        if (query) {
+          const haystack = normalizeText([
+            call.titre,
+            call.organisme_ou_revue,
+            call.lieu,
+            call.resume_court,
+            (call.mots_cles_extraits || []).join(" ")
+          ].join(" "));
+          return query.split(/\s+/).every((word) => haystack.includes(word));
+        }
+        return true;
+      });
+
+      filtered.sort((a, b) => {
+        const da = new Date(a.date_limite_soumission).getTime();
+        const db = new Date(b.date_limite_soumission).getTime();
+        return sortOrder === "deadline_asc" ? da - db : db - da;
+      });
+
+      const countEl = document.getElementById("resultsCount");
+      countEl.innerHTML = `<strong>${filtered.length}</strong> appel${filtered.length > 1 ? "s" : ""} à communication affiché${filtered.length > 1 ? "s" : ""}`;
+
+      const grid = document.getElementById("cfpResultsGrid");
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <p style="font-weight:600; color:var(--text); margin-bottom:0.4rem;">Aucun appel ne correspond exactement à ces critères.</p>
+            <p>Essayez un mot-clé plus large ou cliquez sur <strong>Réinitialiser</strong>.</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = filtered.map((call) => {
+        const daysLeft = getDaysRemaining(call.date_limite_soumission);
+        const deadlineText = daysLeft > 0
+          ? `Clôture dans ${daysLeft} j (${formatDateFr(call.date_limite_soumission)})`
+          : `Limite : ${formatDateFr(call.date_limite_soumission)}`;
+        const urgentClass = daysLeft > 0 && daysLeft <= 35 ? "urgent" : "";
+        const langs = (call.langues || []).map((l) => l.toUpperCase()).join(" · ");
+
+        return `
+          <article class="cfp-card">
+            <div>
+              <div class="cfp-badges">
+                <span class="badge badge-type">${TYPE_LABELS[call.type] || call.type}</span>
+                <span class="badge badge-modalite">${MODALITE_LABELS[call.modalite] || call.modalite}</span>
+                <span class="badge badge-deadline ${urgentClass}">${deadlineText}</span>
+              </div>
+              <h3 class="cfp-title">${call.titre}</h3>
+              <div class="cfp-meta">
+                <span><strong>Organisation :</strong> ${call.organisme_ou_revue}</span>
+                <span><strong>Lieu :</strong> ${call.lieu || "Non précisé"} &nbsp;|&nbsp; <strong>Langues :</strong> ${langs}</span>
+              </div>
+              <p class="cfp-summary">${call.resume_court || ""}</p>
+              <div class="cfp-tags">
+                ${(call.mots_cles_extraits || []).map((kw) => `<span class="cfp-tag">#${kw}</span>`).join("")}
+              </div>
+            </div>
+            <div class="cfp-actions">
+              <button type="button" class="btn-card-secondary" onclick="openScheduleModal('${call.id}')">
+                Rétroplanning J-30
+              </button>
+              <a href="${call.url_source}" target="_blank" rel="noopener noreferrer" class="btn-card-primary">
+                Voir la source
+              </a>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function openScheduleModal(callId) {
+      const call = allCalls.find((c) => c.id === callId);
+      if (!call) return;
+
+      document.getElementById("modalCallTitle").textContent = call.titre;
+      document.getElementById("modalExternalLink").href = call.url_source;
+
+      const j30 = subtractDays(call.date_limite_soumission, 30);
+      const j7 = subtractDays(call.date_limite_soumission, 7);
+      const jourJ = formatDateFr(call.date_limite_soumission);
+
+      document.getElementById("modalMilestones").innerHTML = `
+        <li class="milestone-item"><strong>Jalon 1 (J-30 — ${j30}) :</strong> Cadrage problématique &amp; plan détaillé de la proposition</li>
+        <li class="milestone-item"><strong>Jalon 2 (J-7 — ${j7}) :</strong> Relecture scientifique, bibliographie &amp; mise aux normes</li>
+        <li class="milestone-item"><strong>Jalon 3 (Jour J — ${jourJ}) :</strong> Dépôt final de la soumission avant clôture</li>
+      `;
+
+      document.getElementById("scheduleModal").classList.add("open");
+    }
+
+    // Écouteurs de recherche et filtres
+    document.getElementById("searchInput").addEventListener("input", renderCalls);
+    document.getElementById("filterType").addEventListener("change", renderCalls);
+    document.getElementById("filterModalite").addEventListener("change", renderCalls);
+    document.getElementById("filterLangue").addEventListener("change", renderCalls);
+    document.getElementById("sortSelect").addEventListener("change", renderCalls);
+
+    // Pilules de thématiques rapides
+    document.querySelectorAll(".pill-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const kw = btn.getAttribute("data-keyword");
+        const input = document.getElementById("searchInput");
+        const isAlreadyActive = btn.classList.contains("active");
+
+        document.querySelectorAll(".pill-btn").forEach((b) => b.classList.remove("active"));
+
+        if (isAlreadyActive) {
+          input.value = "";
+        } else {
+          btn.classList.add("active");
+          input.value = kw;
+        }
+        renderCalls();
+      });
+    });
+
+    // Réinitialisation
+    document.getElementById("resetFiltersBtn").addEventListener("click", () => {
+      document.getElementById("searchInput").value = "";
+      document.getElementById("filterType").value = "all";
+      document.getElementById("filterModalite").value = "all";
+      document.getElementById("filterLangue").value = "all";
+      document.getElementById("sortSelect").value = "deadline_asc";
+      document.querySelectorAll(".pill-btn").forEach((b) => b.classList.remove("active"));
+      renderCalls();
+    });
+
+    // Fermeture modale
+    document.getElementById("closeModalBtn").addEventListener("click", () => {
+      document.getElementById("scheduleModal").classList.remove("open");
+    });
+    document.getElementById("scheduleModal").addEventListener("click", (e) => {
+      if (e.target.id === "scheduleModal") {
+        document.getElementById("scheduleModal").classList.remove("open");
+      }
+    });
+
+    // Synchronisation optionnelle en direct avec Supabase si configuré
+    async function loadLiveSupabaseCalls() {
+      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+      try {
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/calls_for_papers?est_actif=eq.true&select=*&order=date_limite_soumission.asc`,
+          {
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+            }
+          }
+        );
+        if (response.ok) {
+          const rows = await response.json();
+          if (Array.isArray(rows) && rows.length > 0) {
+            allCalls = rows;
+            renderCalls();
+          }
+        }
+      } catch (err) {
+        console.warn("Mode autonome actif (Supabase non connecté sur la vitrine web).", err);
+      }
+    }
+
+    renderCalls();
+    loadLiveSupabaseCalls();
+  </script>
 
 </body>
 </html>
