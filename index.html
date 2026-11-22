@@ -228,6 +228,28 @@
       font-size: 1rem;
       line-height: 1;
     }
+    .suggestions-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.55rem;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .suggestion-btn {
+      background: #fff;
+      border: 1px dashed #93c5fd;
+      color: var(--primary);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .suggestion-btn:hover {
+      background: #dbeafe;
+    }
 
     .search-bar-row {
       display: flex;
@@ -521,7 +543,7 @@
     <section id="appels">
       <h2>Explorer les appels à communication vérifiés</h2>
       <p class="section-sub">
-        Recherchez directement parmi les annonces scientifiques indexées dans la base de veille <em>Thèsia</em> (Calenda, Fabula, OpenEdition et universités).
+        Recherchez directement parmi les annonces scientifiques actives indexées dans la base de veille <em>Thèsia</em> (Calenda, Fabula, OpenEdition et universités).
       </p>
 
       <div class="search-panel">
@@ -536,6 +558,14 @@
             </label>
           </div>
           <div class="chips-wrap" id="thesis-kw-chips"></div>
+          <div class="suggestions-row">
+            <span>Suggestions rapides :</span>
+            <button type="button" class="suggestion-btn" data-kw="didactique">+ didactique</button>
+            <button type="button" class="suggestion-btn" data-kw="terminologie">+ terminologie</button>
+            <button type="button" class="suggestion-btn" data-kw="littérature">+ littérature</button>
+            <button type="button" class="suggestion-btn" data-kw="linguistique">+ linguistique</button>
+            <button type="button" class="suggestion-btn" data-kw="intelligence artificielle">+ intelligence artificielle</button>
+          </div>
         </div>
 
         <div class="search-bar-row">
@@ -698,6 +728,18 @@
       return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
     }
 
+    function keywordMatches(haystack, kw) {
+      const cleanKw = normalize(kw).trim();
+      if (!cleanKw) return false;
+      if (haystack.includes(cleanKw)) return true;
+      const words = cleanKw.split(/\s+/).filter(w => w.length >= 6);
+      if (words.length === 1) {
+        const stem = words[0].slice(0, 7);
+        return haystack.includes(stem);
+      }
+      return false;
+    }
+
     function computeAffinity(item) {
       if (thesisKeywords.length === 0) return { score: 0, matched: [] };
       const haystack = normalize([
@@ -706,15 +748,23 @@
         item.organisme_ou_revue,
         ...(Array.isArray(item.mots_cles_extraits) ? item.mots_cles_extraits : [])
       ].join(' '));
-      const matched = thesisKeywords.filter(kw => haystack.includes(normalize(kw)));
+      const matched = thesisKeywords.filter(kw => keywordMatches(haystack, kw));
       const score = Math.round((matched.length / thesisKeywords.length) * 100);
       return { score, matched };
+    }
+
+    function isSummaryRedundant(item) {
+      const summary = normalize(item.resume_court).replace(/[^a-z0-9]/g, '');
+      if (!summary) return true;
+      const title = normalize(item.titre).replace(/[^a-z0-9]/g, '');
+      const org = normalize(item.organisme_ou_revue).replace(/[^a-z0-9]/g, '');
+      return summary === title || summary === title + org;
     }
 
     function renderThesisChips() {
       const container = document.getElementById('thesis-kw-chips');
       if (thesisKeywords.length === 0) {
-        container.innerHTML = '<span style="font-size: 0.82rem; color: #64748b;">Aucun mot-clé actif — ajoutez les concepts de votre thèse (séparés par Entrée ou virgule) pour calculer l’affinité.</span>';
+        container.innerHTML = '<span style="font-size: 0.82rem; color: #64748b;">Aucun mot-clé actif — ajoutez les concepts de votre thèse ou cliquez sur une suggestion ci-dessous.</span>';
         return;
       }
       container.innerHTML = thesisKeywords.map((kw, idx) => `
@@ -798,12 +848,16 @@
 
       container.innerHTML = filtered.map(item => {
         const diff = daysUntil(item.date_limite_soumission);
-        const deadlineLabel = diff >= 0
-          ? `Clôture dans ${diff} j (${formatDateFr(item.date_limite_soumission)})`
-          : `Clôturé (${formatDateFr(item.date_limite_soumission)})`;
+        const deadlineLabel = diff === 0
+          ? `Clôture aujourd'hui (${formatDateFr(item.date_limite_soumission)})`
+          : `Clôture dans ${diff} j (${formatDateFr(item.date_limite_soumission)})`;
         const sourceLabel = item.source_categorie === 'universite' ? 'Université / Labo' : 'Portail académique';
         const langs = Array.isArray(item.langues) ? item.langues.map(l => l.toUpperCase()).join(', ') : 'FR';
         const kws = Array.isArray(item.mots_cles_extraits) ? item.mots_cles_extraits.slice(0, 5) : [];
+        const hasLieu = item.lieu && normalize(item.lieu) !== 'non precise' && normalize(item.lieu) !== 'non précisé';
+        const summaryHtml = isSummaryRedundant(item)
+          ? ''
+          : `<p class="cfp-summary">${escapeHtml(item.resume_court)}</p>`;
 
         const affinityHtml = thesisKeywords.length > 0
           ? `<div class="affinity-badge ${item.affinity.matched.length > 0 ? 'affinity-hit' : 'affinity-zero'}">
@@ -825,9 +879,9 @@
               <h3>${escapeHtml(item.titre)}</h3>
               <div class="cfp-meta">
                 <strong>Organisation :</strong> ${escapeHtml(item.organisme_ou_revue)}<br/>
-                <strong>Lieu :</strong> ${escapeHtml(item.lieu || 'Non précisé')} &nbsp;|&nbsp; <strong>Langues :</strong> ${escapeHtml(langs)}
+                ${hasLieu ? `<strong>Lieu :</strong> ${escapeHtml(item.lieu)} &nbsp;|&nbsp; ` : ''}<strong>Langues :</strong> ${escapeHtml(langs)}
               </div>
-              <p class="cfp-summary">${escapeHtml(item.resume_court || '')}</p>
+              ${summaryHtml}
               ${kws.length ? `<div class="kw-tags">${kws.map(k => `<span class="kw-tag">#${escapeHtml(k)}</span>`).join('')}</div>` : ''}
               ${affinityHtml}
             </div>
@@ -848,7 +902,9 @@
       const item = allCalls.find(c => String(c.id) === String(id));
       if (!item) return;
       document.getElementById('modal-title').textContent = item.titre;
-      document.getElementById('modal-summary').textContent = item.resume_court || '';
+      document.getElementById('modal-summary').textContent = isSummaryRedundant(item)
+        ? `Organisation : ${item.organisme_ou_revue}`
+        : item.resume_court;
       document.getElementById('modal-link').href = item.url_source;
 
       const d0 = new Date(item.date_limite_soumission + 'T00:00:00');
@@ -867,9 +923,10 @@
     async function loadCalls() {
       const statusEl = document.getElementById('db-status');
       const countEl = document.getElementById('results-count');
+      const todayIso = new Date().toISOString().slice(0, 10);
       try {
         const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/calls_for_papers?select=*&est_actif=eq.true&order=date_limite_soumission.asc`,
+          `${SUPABASE_URL}/rest/v1/calls_for_papers?select=*&est_actif=eq.true&date_limite_soumission=gte.${todayIso}&order=date_limite_soumission.asc`,
           {
             headers: {
               apikey: SUPABASE_KEY,
@@ -905,6 +962,9 @@
         addThesisKeywords(e.target.value);
         e.target.value = '';
       }
+    });
+    document.querySelectorAll('.suggestion-btn').forEach(btn => {
+      btn.addEventListener('click', () => addThesisKeywords(btn.dataset.kw));
     });
     document.getElementById('thesis-kw-only').addEventListener('change', renderCalls);
     document.getElementById('search-input').addEventListener('input', renderCalls);
