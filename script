@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thèsia — Assistant de Veille et d'Ingénierie Doctorale</title>
+  <meta name="description" content="Thèsia : veille scientifique automatisée, calcul d'affinité par mots-clés de thèse et rétroplanning doctoral connecté à Google Agenda." />
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --primary: #1e3a8a;
+      --primary-light: #eff6ff;
+      --accent: #0d9488;
+      --border: #e2e8f0;
+      --danger: #dc2626;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .nav-wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .brand {
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--primary);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+    .brand span {
+      font-weight: 500;
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-left: 0.4rem;
+    }
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.92rem;
+      font-weight: 500;
+      margin-left: 1.25rem;
+    }
+    nav a:hover { color: var(--primary); }
+
+    .hero {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 2rem;
+    }
+    .kicker {
+      display: inline-block;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+    .hero h1 {
+      font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+      line-height: 1.2;
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+    .hero p {
+      max-width: 780px;
+      color: var(--muted);
+      margin-bottom: 0.85rem;
+      font-size: 1.02rem;
+    }
+    .hero-en {
+      font-style: italic;
+      font-size: 0.92rem !important;
+      color: #64748b !important;
+    }
+    .hero-actions {
+      margin-top: 1.5rem;
+      display: flex;
+      gap: 0.85rem;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    section {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+    h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.4rem;
+      color: var(--text);
+    }
+    .section-sub {
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+      font-size: 0.96rem;
+    }
+
+    .search-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+      margin-bottom: 1.5rem;
+    }
+    .thesis-box {
+      background: var(--primary-light);
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .thesis-box label {
+      display: block;
+      font-weight: 700;
+      font-size: 0.92rem;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+    }
+    .thesis-input-row {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .thesis-input-row input[type="text"] {
+      flex: 1;
+      min-width: 240px;
+      padding: 0.6rem 0.85rem;
+      border: 1px solid #93c5fd;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      background: #fff;
+    }
+    .btn-add {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 0.62rem 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .btn-add:hover { background: #1d4ed8; }
+    .only-match-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      margin-left: 0.25rem;
+    }
+    .chips-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.65rem;
+      min-height: 1.6rem;
+      align-items: center;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+    }
+    .chip button {
+      background: none;
+      border: none;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .search-bar-row {
+      display: flex;
+      gap: 0.65rem;
+      margin-bottom: 0.85rem;
+      flex-wrap: wrap;
+    }
+    .search-bar-row input {
+      flex: 1;
+      min-width: 240px;
+      padding: 0.68rem 0.95rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+    .btn-reset {
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.65rem 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.65rem;
+    }
+    select {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
+    .status-badge {
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      padding: 0.25rem 0.7rem;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.82rem;
+    }
+    .status-badge.error {
+      background: #fef2f2;
+      color: var(--danger);
+      border-color: #fecaca;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.1rem;
+    }
+    .cfp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 1rem;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 0.65rem;
+    }
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+    .badge-type { background: #e0e7ff; color: #3730a3; }
+    .badge-source { background: #f0fdfa; color: #115e59; }
+    .badge-deadline { background: #fef3c7; color: #92400e; }
+
+    .cfp-card h3 {
+      font-size: 1.05rem;
+      line-height: 1.35;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+    .cfp-meta {
+      font-size: 0.84rem;
+      color: var(--muted);
+      margin-bottom: 0.6rem;
+    }
+    .cfp-summary {
+      font-size: 0.9rem;
+      color: #334155;
+      margin-bottom: 0.75rem;
+    }
+    .kw-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-bottom: 0.65rem;
+    }
+    .kw-tag {
+      font-size: 0.75rem;
+      color: var(--primary);
+      background: var(--primary-light);
+      padding: 0.15rem 0.5rem;
+      border-radius: 5px;
+    }
+    .affinity-badge {
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 0.35rem 0.65rem;
+      border-radius: 7px;
+      margin-top: 0.35rem;
+    }
+    .affinity-hit {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+    .affinity-zero {
+      background: #f8fafc;
+      color: #64748b;
+      border: 1px solid var(--border);
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 0.55rem;
+      flex-wrap: wrap;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+    .btn-retro {
+      flex: 1;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 0.55rem 0.8rem;
+      border-radius: 7px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-source {
+      background: #fff;
+      color: var(--primary);
+      border: 1px solid #bfdbfe;
+      padding: 0.55rem 0.8rem;
+      border-radius: 7px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      text-decoration: none;
+      text-align: center;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem;
+    }
+    .feature-step {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+      margin-bottom: 0.35rem;
+    }
+    .feature-card h3 {
+      font-size: 1.02rem;
+      margin-bottom: 0.45rem;
+    }
+    .feature-card p {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .info-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.35rem;
+    }
+    .info-box p {
+      color: var(--muted);
+      font-size: 0.94rem;
+      margin-bottom: 0.5rem;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      margin-top: 2rem;
+      padding: 1.75rem 1.5rem;
+      text-align: center;
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+    footer a { color: var(--primary); text-decoration: none; }
+
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-card {
+      background: #fff;
+      border-radius: var(--radius);
+      max-width: 560px;
+      width: 100%;
+      padding: 1.5rem;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+    }
+    .modal-card h3 { margin-bottom: 0.65rem; font-size: 1.15rem; }
+    .milestone {
+      background: #f8fafc;
+      border-left: 3px solid var(--primary);
+      padding: 0.6rem 0.85rem;
+      margin: 0.55rem 0;
+      font-size: 0.9rem;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.65rem;
+      margin-top: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav-wrap">
+      <a class="brand" href="#accueil">Thèsia <span>AVIDOC</span></a>
+      <nav>
+        <a href="#accueil">Accueil</a>
+        <a href="#appels">Appels à communication</a>
+        <a href="#fonctionnalites">Fonctionnalités</a>
+        <a href="privacy.html">Confidentialité (Privacy)</a>
+        <a href="terms.html">CGU (Terms)</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero" id="accueil">
+      <span class="kicker">Ingénierie pédagogique &amp; Recherche doctorale</span>
+      <h1>Thèsia : la veille scientifique et le rétroplanning doctoral automatisés</h1>
+      <p>
+        Conçue pour réduire la charge cognitive des doctorants, l'application mobile <em>Thèsia</em> collecte les appels à communication (colloques, doctoriales, numéros spéciaux de revues), évalue leur affinité avec vos mots-clés de thèse et planifie vos jalons de rédaction directement dans Google Agenda.
+      </p>
+      <p class="hero-en">
+        English Overview: Thèsia is a mobile academic watch and scheduling assistant for PhD candidates. It filters verified calls for papers using research keywords, generates concise writing angle suggestions, and automates backward milestone scheduling in a dedicated Google Calendar.
+      </p>
+      <div class="hero-actions">
+        <a class="btn-primary" href="#appels">Rechercher un appel à communication</a>
+        <a class="btn-secondary" href="privacy.html">Politique de confidentialité / Privacy Policy</a>
+      </div>
+    </div>
+
+    <section id="appels">
+      <h2>Explorer les appels à communication vérifiés</h2>
+      <p class="section-sub">
+        Recherchez directement parmi les annonces scientifiques indexées dans la base de veille <em>Thèsia</em> (Calenda, Fabula, OpenEdition et universités).
+      </p>
+
+      <div class="search-panel">
+        <div class="thesis-box">
+          <label for="thesis-kw-input">🎓 Mots-clés de votre sujet de thèse :</label>
+          <div class="thesis-input-row">
+            <input type="text" id="thesis-kw-input" placeholder="Ex. intelligence artificielle, didactique, littérature... (Entrée)" />
+            <button type="button" class="btn-add" id="thesis-kw-add">+ Ajouter</button>
+            <label class="only-match-label">
+              <input type="checkbox" id="thesis-kw-only" />
+              Filtrer les correspondances uniquement
+            </label>
+          </div>
+          <div class="chips-wrap" id="thesis-kw-chips"></div>
+        </div>
+
+        <div class="search-bar-row">
+          <input type="text" id="search-input" placeholder="Saisissez un intitulé d'annonce, un thème, une revue ou un établissement..." />
+          <button type="button" class="btn-reset" id="reset-btn">Réinitialiser</button>
+        </div>
+
+        <div class="filters-grid">
+          <select id="filter-type" aria-label="Type d'événement">
+            <option value="">Tous les types d'événements</option>
+            <option value="colloque">Colloque scientifique</option>
+            <option value="doctoriales">Doctoriales</option>
+            <option value="journee_etude">Journée d'étude</option>
+            <option value="numero_revue">Numéro spécial de revue</option>
+          </select>
+
+          <select id="filter-modalite" aria-label="Modalité">
+            <option value="">Toutes les modalités</option>
+            <option value="presentiel">Présentiel</option>
+            <option value="hybride">Hybride</option>
+            <option value="en_ligne">En ligne / Distanciel</option>
+          </select>
+
+          <select id="filter-langue" aria-label="Langue">
+            <option value="">Toutes les langues</option>
+            <option value="fr">Français (FR)</option>
+            <option value="en">Anglais (EN)</option>
+            <option value="ar">Arabe (AR)</option>
+          </select>
+
+          <select id="sort-order" aria-label="Tri">
+            <option value="affinity">Trier : Affinité thèse puis date</option>
+            <option value="asc">Trier : Date limite (plus proche)</option>
+            <option value="desc">Trier : Date limite (plus lointaine)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="status-bar">
+        <strong id="results-count">Chargement des annonces...</strong>
+        <span class="status-badge" id="db-status">Connexion à Supabase...</span>
+      </div>
+
+      <div class="cards-grid" id="cards-container"></div>
+    </section>
+
+    <section id="fonctionnalites">
+      <h2>Une chaîne complète de la détection au dépôt</h2>
+      <p class="section-sub">
+        De la configuration rapide par mots-clés jusqu'au rappel le jour de la soumission, chaque étape soutient l'autorégulation et la valorisation scientifique.
+      </p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-step">1. PROFIL SÉMANTIQUE LÉGER</div>
+          <h3>Paramétrage par mots-clés pondérés</h3>
+          <p>Renseignez vos concepts cœurs et votre terrain de recherche pour calculer automatiquement l'affinité avec chaque appel.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-step">2. AIDE À LA DÉCISION IA</div>
+          <h3>Score d'affinité et conseil d'angle</h3>
+          <p>Chaque appel pertinent reçoit un score de compatibilité reliant votre problématique de thèse aux axes scientifiques de l'événement.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-step">3. SYNCHRONISATION GOOGLE AGENDA</div>
+          <h3>Rétroplanning automatique en 3 jalons</h3>
+          <p>Thèsia programme trois étapes clés : <em>J-30 Cadrage &amp; Plan</em>, <em>J-7 Relecture</em> et <em>Jour J Dépôt</em>.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-step">4. VEILLE UNIVERSITAIRE DE PROXIMITÉ</div>
+          <h3>Capture photo d'affiches par Vision IA</h3>
+          <p>L'extraction optique normalise automatiquement les dates, le lieu et les thématiques pour toute la communauté.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Protection de la vie privée et usage limité Google Calendar</h2>
+      <div class="info-box">
+        <p>
+          Thèsia utilise exclusivement la permission restreinte <code>https://www.googleapis.com/auth/calendar.app.created</code>. L'application crée un calendrier secondaire isolé pour vos échéances scientifiques et <em>n'accède jamais à votre agenda personnel principal</em>. Consultez notre <a href="privacy.html">Politique de confidentialité</a> pour plus de détails.
+        </p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Conception scientifique et affiliation institutionnelle</h2>
+      <div class="info-box">
+        <p><strong>Application :</strong> Thèsia — Assistant de Veille et d'Ingénierie Doctorale (AVIDOC)</p>
+        <p><strong>Conception et développement :</strong> Achraf BOUGRINE</p>
+        <p><strong>Laboratoire :</strong> Laboratoire Littérature, Arts et Ingénierie Pédagogique (LLAIP)</p>
+        <p><strong>Établissement :</strong> Faculté des Langues, des Lettres et des Arts (FLLA) — Université Ibn Tofaïl, Kénitra (Maroc)</p>
+        <p><strong>Contact officiel :</strong> <a href="mailto:Achraf.bougrine1@uit.ac.ma">Achraf.bougrine1@uit.ac.ma</a></p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2026 Thèsia — Achraf BOUGRINE (LLAIP, FLLA, Université Ibn Tofaïl, Kénitra).</p>
+    <p style="margin-top: 0.4rem;">
+      <a href="#accueil">Accueil</a> ·
+      <a href="#appels">Appels à communication</a> ·
+      <a href="privacy.html">Politique de confidentialité / Privacy Policy</a> ·
+      <a href="terms.html">Conditions Générales d'Utilisation / Terms of Service</a>
+    </p>
+  </footer>
+
+  <div class="modal-backdrop" id="retro-modal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h3 id="modal-title">Rétroplanning doctoral</h3>
+      <p id="modal-summary" style="font-size: 0.9rem; color: var(--muted); margin-bottom: 0.85rem;"></p>
+      <div id="modal-milestones"></div>
+      <div class="modal-footer">
+        <a id="modal-link" class="btn-source" href="#" target="_blank" rel="noopener">Ouvrir la source</a>
+        <button type="button" class="btn-add" id="modal-close">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://htoecqomhpqfvaoluhru.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_pRH3jjSp40Xbqz83osjESA_b1dBIEve';
+
+    const STORAGE_KEY = 'thesia_thesis_keywords_v1';
+    let thesisKeywords = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let allCalls = [];
+
+    const TYPE_LABELS = {
+      colloque: 'Colloque',
+      doctoriales: 'Doctoriales',
+      journee_etude: "Journée d'étude",
+      numero_revue: 'Numéro de revue'
+    };
+
+    const MODALITE_LABELS = {
+      presentiel: 'Présentiel',
+      hybride: 'Hybride',
+      en_ligne: 'En ligne'
+    };
+
+    function normalize(str) {
+      return (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+
+    function formatDateFr(isoDate) {
+      if (!isoDate) return 'Non précisée';
+      const d = new Date(isoDate + 'T00:00:00');
+      return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+    }
+
+    function daysUntil(isoDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const target = new Date(isoDate + 'T00:00:00');
+      return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+    }
+
+    function computeAffinity(item) {
+      if (thesisKeywords.length === 0) return { score: 0, matched: [] };
+      const haystack = normalize([
+        item.titre,
+        item.resume_court,
+        item.organisme_ou_revue,
+        ...(Array.isArray(item.mots_cles_extraits) ? item.mots_cles_extraits : [])
+      ].join(' '));
+      const matched = thesisKeywords.filter(kw => haystack.includes(normalize(kw)));
+      const score = Math.round((matched.length / thesisKeywords.length) * 100);
+      return { score, matched };
+    }
+
+    function renderThesisChips() {
+      const container = document.getElementById('thesis-kw-chips');
+      if (thesisKeywords.length === 0) {
+        container.innerHTML = '<span style="font-size: 0.82rem; color: #64748b;">Aucun mot-clé actif — ajoutez les concepts de votre thèse (séparés par Entrée ou virgule) pour calculer l’affinité.</span>';
+        return;
+      }
+      container.innerHTML = thesisKeywords.map((kw, idx) => `
+        <span class="chip">
+          ${escapeHtml(kw)}
+          <button type="button" data-idx="${idx}" aria-label="Supprimer">×</button>
+        </span>
+      `).join('');
+      container.querySelectorAll('button[data-idx]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          thesisKeywords.splice(Number(btn.dataset.idx), 1);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(thesisKeywords));
+          renderThesisChips();
+          renderCalls();
+        });
+      });
+    }
+
+    function addThesisKeywords(raw) {
+      raw.split(',').forEach(part => {
+        const clean = part.trim();
+        if (clean && !thesisKeywords.some(k => normalize(k) === normalize(clean))) {
+          thesisKeywords.push(clean);
+        }
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(thesisKeywords));
+      renderThesisChips();
+      renderCalls();
+    }
+
+    function renderCalls() {
+      const q = normalize(document.getElementById('search-input').value.trim());
+      const typeFilter = document.getElementById('filter-type').value;
+      const modaliteFilter = document.getElementById('filter-modalite').value;
+      const langueFilter = document.getElementById('filter-langue').value;
+      const sortOrder = document.getElementById('sort-order').value;
+      const onlyThesis = document.getElementById('thesis-kw-only').checked && thesisKeywords.length > 0;
+
+      let enriched = allCalls.map(item => ({
+        ...item,
+        affinity: computeAffinity(item)
+      }));
+
+      let filtered = enriched.filter(item => {
+        if (typeFilter && item.type !== typeFilter) return false;
+        if (modaliteFilter && item.modalite !== modaliteFilter) return false;
+        if (langueFilter && (!Array.isArray(item.langues) || !item.langues.includes(langueFilter))) return false;
+        if (onlyThesis && item.affinity.matched.length === 0) return false;
+        if (q) {
+          const text = normalize([
+            item.titre,
+            item.resume_court,
+            item.organisme_ou_revue,
+            item.lieu,
+            ...(Array.isArray(item.mots_cles_extraits) ? item.mots_cles_extraits : [])
+          ].join(' '));
+          if (!text.includes(q)) return false;
+        }
+        return true;
+      });
+
+      filtered.sort((a, b) => {
+        if (sortOrder === 'affinity' && thesisKeywords.length > 0) {
+          if (b.affinity.matched.length !== a.affinity.matched.length) {
+            return b.affinity.matched.length - a.affinity.matched.length;
+          }
+        }
+        const da = a.date_limite_soumission || '9999-12-31';
+        const db = b.date_limite_soumission || '9999-12-31';
+        return sortOrder === 'desc' ? db.localeCompare(da) : da.localeCompare(db);
+      });
+
+      const countEl = document.getElementById('results-count');
+      countEl.textContent = `${filtered.length} annonce${filtered.length > 1 ? 's' : ''} vérifiée${filtered.length > 1 ? 's' : ''}`;
+
+      const container = document.getElementById('cards-container');
+      if (filtered.length === 0) {
+        container.innerHTML = '<p style="grid-column: 1 / -1; color: var(--muted);">Aucune annonce ne correspond à ces critères. Cliquez sur <strong>Réinitialiser</strong> ou élargissez vos mots-clés.</p>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => {
+        const diff = daysUntil(item.date_limite_soumission);
+        const deadlineLabel = diff >= 0
+          ? `Clôture dans ${diff} j (${formatDateFr(item.date_limite_soumission)})`
+          : `Clôturé (${formatDateFr(item.date_limite_soumission)})`;
+        const sourceLabel = item.source_categorie === 'universite' ? 'Université / Labo' : 'Portail académique';
+        const langs = Array.isArray(item.langues) ? item.langues.map(l => l.toUpperCase()).join(', ') : 'FR';
+        const kws = Array.isArray(item.mots_cles_extraits) ? item.mots_cles_extraits.slice(0, 5) : [];
+
+        const affinityHtml = thesisKeywords.length > 0
+          ? `<div class="affinity-badge ${item.affinity.matched.length > 0 ? 'affinity-hit' : 'affinity-zero'}">
+              ${item.affinity.matched.length > 0
+                ? `Affinité thèse : ${item.affinity.score}% (${escapeHtml(item.affinity.matched.join(', '))})`
+                : 'Affinité thèse : 0%'}
+            </div>`
+          : '';
+
+        return `
+          <article class="cfp-card">
+            <div>
+              <div class="badges">
+                <span class="badge badge-type">${escapeHtml(TYPE_LABELS[item.type] || item.type)}</span>
+                <span class="badge">${escapeHtml(MODALITE_LABELS[item.modalite] || item.modalite)}</span>
+                <span class="badge badge-source">${sourceLabel}</span>
+                <span class="badge badge-deadline">${deadlineLabel}</span>
+              </div>
+              <h3>${escapeHtml(item.titre)}</h3>
+              <div class="cfp-meta">
+                <strong>Organisation :</strong> ${escapeHtml(item.organisme_ou_revue)}<br/>
+                <strong>Lieu :</strong> ${escapeHtml(item.lieu || 'Non précisé')} &nbsp;|&nbsp; <strong>Langues :</strong> ${escapeHtml(langs)}
+              </div>
+              <p class="cfp-summary">${escapeHtml(item.resume_court || '')}</p>
+              ${kws.length ? `<div class="kw-tags">${kws.map(k => `<span class="kw-tag">#${escapeHtml(k)}</span>`).join('')}</div>` : ''}
+              ${affinityHtml}
+            </div>
+            <div class="card-actions">
+              <button type="button" class="btn-retro" data-id="${item.id}">Détails &amp; Rétroplanning</button>
+              <a class="btn-source" href="${escapeHtml(item.url_source)}" target="_blank" rel="noopener">Source officielle</a>
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      container.querySelectorAll('.btn-retro').forEach(btn => {
+        btn.addEventListener('click', () => openModal(btn.dataset.id));
+      });
+    }
+
+    function openModal(id) {
+      const item = allCalls.find(c => String(c.id) === String(id));
+      if (!item) return;
+      document.getElementById('modal-title').textContent = item.titre;
+      document.getElementById('modal-summary').textContent = item.resume_court || '';
+      document.getElementById('modal-link').href = item.url_source;
+
+      const d0 = new Date(item.date_limite_soumission + 'T00:00:00');
+      const d7 = new Date(d0); d7.setDate(d0.getDate() - 7);
+      const d30 = new Date(d0); d30.setDate(d0.getDate() - 30);
+      const fmt = d => d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+      document.getElementById('modal-milestones').innerHTML = `
+        <div class="milestone"><strong>J-30 (${fmt(d30)}) :</strong> Cadrage problématique &amp; plan détaillé de la proposition.</div>
+        <div class="milestone"><strong>J-7 (${fmt(d7)}) :</strong> Rédaction complète, bibliographie et relecture scientifique.</div>
+        <div class="milestone"><strong>Jour J (${fmt(d0)}) :</strong> Dépôt officiel de la proposition sur la plateforme.</div>
+      `;
+      document.getElementById('retro-modal').classList.add('open');
+    }
+
+    async function loadCalls() {
+      const statusEl = document.getElementById('db-status');
+      const countEl = document.getElementById('results-count');
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/calls_for_papers?select=*&est_actif=eq.true&order=date_limite_soumission.asc`,
+          {
+            headers: {
+              apikey: SUPABASE_KEY,
+              Authorization: `Bearer ${SUPABASE_KEY}`
+            }
+          }
+        );
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`HTTP ${res.status} : ${errText}`);
+        }
+
+        allCalls = await res.json();
+        statusEl.className = 'status-badge';
+        statusEl.textContent = 'Connecté en direct : base scientifique Thèsia';
+        renderCalls();
+      } catch (err) {
+        statusEl.className = 'status-badge error';
+        statusEl.textContent = `Erreur Supabase : ${err.message}`;
+        countEl.textContent = '0 annonce vérifiée';
+      }
+    }
+
+    document.getElementById('thesis-kw-add').addEventListener('click', () => {
+      const inp = document.getElementById('thesis-kw-input');
+      addThesisKeywords(inp.value);
+      inp.value = '';
+    });
+    document.getElementById('thesis-kw-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addThesisKeywords(e.target.value);
+        e.target.value = '';
+      }
+    });
+    document.getElementById('thesis-kw-only').addEventListener('change', renderCalls);
+    document.getElementById('search-input').addEventListener('input', renderCalls);
+    document.getElementById('filter-type').addEventListener('change', renderCalls);
+    document.getElementById('filter-modalite').addEventListener('change', renderCalls);
+    document.getElementById('filter-langue').addEventListener('change', renderCalls);
+    document.getElementById('sort-order').addEventListener('change', renderCalls);
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      document.getElementById('search-input').value = '';
+      document.getElementById('filter-type').value = '';
+      document.getElementById('filter-modalite').value = '';
+      document.getElementById('filter-langue').value = '';
+      document.getElementById('sort-order').value = 'affinity';
+      document.getElementById('thesis-kw-only').checked = false;
+      renderCalls();
+    });
+    document.getElementById('modal-close').addEventListener('click', () => {
+      document.getElementById('retro-modal').classList.remove('open');
+    });
+    document.getElementById('retro-modal').addEventListener('click', e => {
+      if (e.target.id === 'retro-modal') e.target.classList.remove('open');
+    });
+
+    renderThesisChips();
+    loadCalls();
+  </script>
+</body>
+</html>
